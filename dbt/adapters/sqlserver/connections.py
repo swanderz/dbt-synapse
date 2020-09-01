@@ -14,6 +14,7 @@ from typing import Optional
 
 def create_token(app_id, app_secret):
     # FILL ME IN
+    access_token = "blah"
     return access_token
 
 @dataclass
@@ -28,6 +29,8 @@ class SQLServerCredentials(Credentials):
     # "sql", "ActiveDirectoryPassword" or "ActiveDirectoryInteractive"
     authentication: Optional[str] = "sql"
     encrypt: Optional[str] = "yes"
+    app_id: Optional[str] = None
+    app_secret: Optional[str] = None
 
     _ALIASES = {
         'user': 'UID'
