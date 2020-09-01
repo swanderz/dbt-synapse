@@ -12,6 +12,9 @@ from dbt.logger import GLOBAL_LOGGER as logger
 from dataclasses import dataclass
 from typing import Optional
 
+def create_token(app_id, app_secret):
+    # FILL ME IN
+    return access_token
 
 @dataclass
 class SQLServerCredentials(Credentials):
@@ -106,8 +109,14 @@ class SQLServerConnectionManager(SQLConnectionManager):
                 elif type_auth == "ActiveDirectoryIntegrated":
                     # why is this necessary???
                     con_str.remove("UID={None}")
+                elif type_auth == "ActiveDirectoryServicePrincipal":
+                    app_id = getattr(credentials, 'AppId', None)
+                    app_secret = getattr(credentials, 'AppSecret', None)
+                    # create an access token
+                    tkn_access =
                 elif type_auth == "ActiveDirectoryMsi":
                     raise ValueError("ActiveDirectoryMsi is not supported yet")
+
 
             elif type_auth == 'sql':
                 con_str.append("Authentication=SqlPassword")
@@ -119,7 +128,14 @@ class SQLServerConnectionManager(SQLConnectionManager):
 
             con_str_concat = ';'.join(con_str)
             logger.debug(f'Using connection string: {con_str_concat}')
-            handle = pyodbc.connect(con_str_concat, autocommit=True)
+
+            if type_auth != 'ActiveDirectoryServicePrincipal':
+                handle = pyodbc.connect(con_str_concat, autocommit=True)
+            elif type_auth == 'ActiveDirectoryServicePrincipal':
+                # create token
+                access_token = create_token(app_id, app_secret)
+                logger.debug(f'access token check: {access_token}')
+                handle = pyodbc.connect(con_str_concat, token=access_token, autocommit=True) 
 
             connection.state = 'open'
             connection.handle = handle
