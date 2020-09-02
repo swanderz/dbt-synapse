@@ -1,16 +1,14 @@
-from contextlib import contextmanager
-
-import pyodbc
 import time
-
-import dbt.exceptions
-from dbt.adapters.base import Credentials
-from dbt.adapters.sql import SQLConnectionManager
-
-from dbt.logger import GLOBAL_LOGGER as logger
-
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Optional
+
+import dbt.exceptions
+import pyodbc
+from dbt.adapters.base import Credentials
+from dbt.adapters.sql import SQLConnectionManager
+from dbt.logger import GLOBAL_LOGGER as logger
+
 
 def create_token(app_id, app_secret):
     # FILL ME IN
