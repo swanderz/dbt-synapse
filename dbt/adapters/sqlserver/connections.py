@@ -1,3 +1,5 @@
+import os
+import struct
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -5,6 +7,7 @@ from typing import Optional
 
 import dbt.exceptions
 import pyodbc
+from azure.identity import DefaultAzureCredential
 from dbt.adapters.base import Credentials
 from dbt.adapters.sql import SQLConnectionManager
 from dbt.logger import GLOBAL_LOGGER as logger
