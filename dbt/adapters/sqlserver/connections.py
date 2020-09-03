@@ -13,10 +13,21 @@ from dbt.adapters.sql import SQLConnectionManager
 from dbt.logger import GLOBAL_LOGGER as logger
 
 
-def create_token(app_id, app_secret):
-    # FILL ME IN
-    access_token = "blah"
-    return access_token
+def create_token(tenant_id, client_id, client_secret):
+    # bc DefaultAzureCredential will look in env variables
+    os.environ['AZURE_TENANT_ID'] = tenant_id
+    os.environ['AZURE_CLIENT_ID'] = client_id
+    os.environ['AZURE_CLIENT_SECRET'] = client_secret
+
+    token = DefaultAzureCredential().get_token('https://database.windows.net//.default')
+    # convert to byte string interspersed with the 1-byte
+    # TODO decide which is cleaner?
+    # exptoken=b''.join([bytes({i})+bytes(1) for i in bytes(token.token, "UTF-8")])
+    exptoken = bytes(1).join([bytes(i, "UTF-8") for i in  token.token])+bytes(1)
+    # make c object with bytestring length prefix
+    tokenstruct = struct.pack("=i", len(exptoken)) + exptoken
+
+    return tokenstruct
 
 @dataclass
 class SQLServerCredentials(Credentials):
@@ -27,11 +38,12 @@ class SQLServerCredentials(Credentials):
     port: Optional[int] = 1433
     UID: Optional[str] = None
     PWD: Optional[str] = None
+    tenant_id: Optional[str] = None
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
     # "sql", "ActiveDirectoryPassword" or "ActiveDirectoryInteractive"
     authentication: Optional[str] = "sql"
     encrypt: Optional[str] = "yes"
-    app_id: Optional[str] = None
-    app_secret: Optional[str] = None
 
     _ALIASES = {
         'user': 'UID'
@@ -40,6 +52,8 @@ class SQLServerCredentials(Credentials):
         , 'password': 'PWD'
         , 'server': 'host'
         , 'auth': 'authentication'
+        , 'app_id': 'client_id'
+        , 'app_secret': 'client_secret'
     }
 
     @property
@@ -134,9 +148,15 @@ class SQLServerConnectionManager(SQLConnectionManager):
                 handle = pyodbc.connect(con_str_concat, autocommit=True)
             elif type_auth == 'ServicePrincipal':
                 # create token
-                access_token = create_token(app_id, app_secret)
-                logger.debug(f'access token check: {access_token}')
-                handle = pyodbc.connect(con_str_concat, token=access_token, autocommit=True) 
+                tenant_id = getattr(credentials, 'tenant_id', None)
+                client_id = getattr(credentials, 'client_id', None)
+                client_secret = getattr(credentials, 'client_secret', None)
+
+                tokenstruct = create_token(tenant_id, client_id, client_secret)
+                logger.debug(f'access token check: {tokenstruct}')
+                handle = pyodbc.connect(con_str_concat,
+                                        attrs_before = {1256:tokenstruct},
+                                        autocommit=True) 
 
             connection.state = 'open'
             connection.handle = handle
