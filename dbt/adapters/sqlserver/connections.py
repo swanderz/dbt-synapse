@@ -69,6 +69,7 @@ class SQLServerCredentials(Credentials):
 
 class SQLServerConnectionManager(SQLConnectionManager):
     TYPE = 'sqlserver'
+    TOKEN = None
 
     @contextmanager
     def exception_handler(self, sql):
@@ -147,15 +148,17 @@ class SQLServerConnectionManager(SQLConnectionManager):
             if type_auth != 'ServicePrincipal':
                 handle = pyodbc.connect(con_str_concat, autocommit=True)
             elif type_auth == 'ServicePrincipal':
-                # create token
-                tenant_id = getattr(credentials, 'tenant_id', None)
-                client_id = getattr(credentials, 'client_id', None)
-                client_secret = getattr(credentials, 'client_secret', None)
 
-                tokenstruct = create_token(tenant_id, client_id, client_secret)
-                logger.debug(f'access token check: {tokenstruct}')
+                # create token if it does not exist
+                if cls.TOKEN is None:
+                    tenant_id = getattr(credentials, 'tenant_id', None)
+                    client_id = getattr(credentials, 'client_id', None)
+                    client_secret = getattr(credentials, 'client_secret', None)
+
+                    cls.TOKEN = create_token(tenant_id, client_id, client_secret)
+
                 handle = pyodbc.connect(con_str_concat,
-                                        attrs_before = {1256:tokenstruct},
+                                        attrs_before = {1256:cls.TOKEN},
                                         autocommit=True) 
 
             connection.state = 'open'
