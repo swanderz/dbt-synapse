@@ -25,7 +25,9 @@
                         {# single-quotes inside of strings must be doubled #}
                     
                     {% set col_type = agate_table.columns[column].data_type | string %}
-                    {%- if "text.Text" in col_type -%}
+                    {%- if "text.Text" in col_type and row[column] == None -%}
+                        NULL
+                    {%- elif "text.Text" in col_type -%}
                       '{{str_replace(row[column]) if row[column]}}'
                     {% else %}
                       '{{ row[column] if row[column] }}'
